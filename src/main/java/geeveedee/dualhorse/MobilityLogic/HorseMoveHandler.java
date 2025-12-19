@@ -12,6 +12,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
 
 import java.lang.reflect.Method;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 public class HorseMoveHandler implements Listener {
@@ -38,8 +39,27 @@ public class HorseMoveHandler implements Listener {
             return;
         }
 
-        ArmorStand armorStand = main.GetArmorstand(horse.getLocation(), main.GetKnownArmorstandFromHorseUUID(horse.getUniqueId()));
-        armorStand.teleport(horse.getLocation().add(main.getOffSetX(horse), main.GetArmorstandHeight(e.getPlayer().getVehicle()), main.getOffSetZ(horse)));
+        UUID asUUID = main.GetKnownArmorstandFromHorseUUID(horse.getUniqueId());
+        ArmorStand armorStand = main.GetArmorstand(horse.getLocation(), asUUID);
+
+        // Fallback: use global lookup by UUID if outside the nearby search radius
+        if (armorStand == null && asUUID != null) {
+            Entity maybe = Bukkit.getEntity(asUUID);
+            if (maybe instanceof ArmorStand) {
+                armorStand = (ArmorStand) maybe;
+            }
+        }
+
+        if (armorStand == null) {
+            // Armor stand not found; avoid NPE and exit early
+            return;
+        }
+
+        armorStand.teleport(horse.getLocation().add(
+                main.getOffSetX(horse),
+                main.GetArmorstandHeight(e.getPlayer().getVehicle()),
+                main.getOffSetZ(horse))
+        );
 
         Method[] methods = ((Supplier<Method[]>) () -> {
             try {
@@ -57,8 +77,11 @@ public class HorseMoveHandler implements Listener {
         Location loc = horse.getLocation().add(main.getOffSetX(horse), main.GetArmorstandHeight(e.getPlayer().getVehicle()), main.getOffSetZ(horse));
 
         try {
-            methods[1].invoke(methods[0].invoke(armorStand), loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
+            if (methods != null) {
+                methods[1].invoke(methods[0].invoke(armorStand), loc.getX(), loc.getY(), loc.getZ(), loc.getYaw(), loc.getPitch());
+            }
         } catch (Exception ex2) {
+            // silently ignore to preserve behavior across versions
         }
 
     }

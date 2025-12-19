@@ -109,7 +109,18 @@ public final class DualHorse extends JavaPlugin {
             horseArmorStandLink.remove(key);
         }
 
-        GetArmorstand(location, armorstandUUID).remove();
+        ArmorStand as = GetArmorstand(location, armorstandUUID);
+        if (as == null && armorstandUUID != null) {
+            // Fallback global busca por UUID caso esteja fora do raio
+            Entity maybe = Bukkit.getEntity(armorstandUUID);
+            if (maybe instanceof ArmorStand) {
+                as = (ArmorStand) maybe;
+            }
+        }
+
+        if (as != null) {
+            as.remove();
+        }
     }
 
     public ArmorStand GetArmorstand(Location location, UUID armorstandUUID) {
